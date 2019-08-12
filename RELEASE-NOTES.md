@@ -3,6 +3,7 @@
 * Revert LTO build (to fix deterministic build)
 * Allow stopping bulk indexing via SIGINT/SIGTERM
 * Cache list of transaction IDs for blocks
+* Cache capacity is now defined in megabytes, rather than number of entries. (see `--tx-cache-size` and `--blocktxids-cache-size` flags)
 
 # 0.7.0 (13 June 2019)
 
