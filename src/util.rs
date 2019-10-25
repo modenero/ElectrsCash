@@ -301,10 +301,10 @@ mod tests {
         // Test an empty header list
         let null_hash = Sha256dHash::default();
         let mut header_list = HeaderList::empty();
-        assert_eq!(header_list.tip(), null_hash);
+        assert_eq!(header_list.tiphash(), null_hash);
         let ordered = header_list.order(vec![]);
         assert_eq!(ordered.len(), 0);
-        header_list.apply(vec![], null_hash);
+        header_list.apply(&vec![], null_hash);
 
         let merkle_root = Sha256dHash::hash(&[255]);
         let mut headers = vec![BlockHeader {
@@ -331,9 +331,9 @@ mod tests {
         // Test adding some new headers
         let ordered = header_list.order(headers[..3].to_vec());
         assert_eq!(ordered.len(), 3);
-        header_list.apply(ordered.clone(), ordered[2].hash);
+        header_list.apply(&ordered, ordered[2].hash);
         assert_eq!(header_list.len(), 3);
-        assert_eq!(header_list.tip(), ordered[2].hash);
+        assert_eq!(header_list.tiphash(), ordered[2].hash);
         for h in 0..3 {
             let entry = header_list.header_by_height(h).unwrap();
             assert_eq!(entry.header, headers[h]);
@@ -345,9 +345,9 @@ mod tests {
         // Test adding some more headers
         let ordered = header_list.order(headers[3..6].to_vec());
         assert_eq!(ordered.len(), 3);
-        header_list.apply(ordered.clone(), ordered[2].hash);
+        header_list.apply(&ordered, ordered[2].hash);
         assert_eq!(header_list.len(), 6);
-        assert_eq!(header_list.tip(), ordered[2].hash);
+        assert_eq!(header_list.tiphash(), ordered[2].hash);
         for h in 0..6 {
             let entry = header_list.header_by_height(h).unwrap();
             assert_eq!(entry.header, headers[h]);
@@ -359,9 +359,9 @@ mod tests {
         // Test adding some more headers (with an overlap)
         let ordered = header_list.order(headers[5..].to_vec());
         assert_eq!(ordered.len(), 5);
-        header_list.apply(ordered.clone(), ordered[4].hash);
+        header_list.apply(&ordered, ordered[4].hash);
         assert_eq!(header_list.len(), 10);
-        assert_eq!(header_list.tip(), ordered[4].hash);
+        assert_eq!(header_list.tiphash(), ordered[4].hash);
         for h in 0..10 {
             let entry = header_list.header_by_height(h).unwrap();
             assert_eq!(entry.header, headers[h]);
@@ -378,9 +378,9 @@ mod tests {
         // Test reorging the chain
         let ordered = header_list.order(headers[8..10].to_vec());
         assert_eq!(ordered.len(), 2);
-        header_list.apply(ordered.clone(), ordered[1].hash);
+        header_list.apply(&ordered, ordered[1].hash);
         assert_eq!(header_list.len(), 10);
-        assert_eq!(header_list.tip(), ordered[1].hash);
+        assert_eq!(header_list.tiphash(), ordered[1].hash);
         for h in 0..10 {
             let entry = header_list.header_by_height(h).unwrap();
             assert_eq!(entry.header, headers[h]);
@@ -390,9 +390,9 @@ mod tests {
         }
 
         // Test "trimming" the chain
-        header_list.apply(vec![], headers[7].bitcoin_hash());
+        header_list.apply(&vec![], headers[7].bitcoin_hash());
         assert_eq!(header_list.len(), 8);
-        assert_eq!(header_list.tip(), headers[7].bitcoin_hash());
+        assert_eq!(header_list.tiphash(), headers[7].bitcoin_hash());
         for h in 0..8 {
             let entry = header_list.header_by_height(h).unwrap();
             assert_eq!(entry.header, headers[h]);
@@ -404,9 +404,9 @@ mod tests {
         // Test "un-trimming" the chain
         let ordered = header_list.order(headers[8..].to_vec());
         assert_eq!(ordered.len(), 2);
-        header_list.apply(ordered.clone(), ordered[1].hash);
+        header_list.apply(&ordered, ordered[1].hash);
         assert_eq!(header_list.len(), 10);
-        assert_eq!(header_list.tip(), ordered[1].hash);
+        assert_eq!(header_list.tiphash(), ordered[1].hash);
         for h in 0..10 {
             let entry = header_list.header_by_height(h).unwrap();
             assert_eq!(entry.header, headers[h]);
