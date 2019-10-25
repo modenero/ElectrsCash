@@ -125,7 +125,7 @@ impl HeaderList {
             .collect()
     }
 
-    pub fn apply(&mut self, new_headers: Vec<HeaderEntry>, tip: Sha256dHash) {
+    pub fn apply(&mut self, new_headers: &Vec<HeaderEntry>, tip: Sha256dHash) {
         if tip == Sha256dHash::default() {
             assert!(new_headers.is_empty());
             self.heights.clear();
@@ -174,11 +174,11 @@ impl HeaderList {
         assert_eq!(new_height, self.headers.len());
         for new_header in new_headers {
             assert_eq!(new_header.height(), self.headers.len());
-            assert_eq!(new_header.header().prev_blockhash, self.tip());
+            assert_eq!(new_header.header().prev_blockhash, self.tiphash());
             self.heights.insert(*new_header.hash(), new_header.height());
-            self.headers.push(new_header);
+            self.headers.push(new_header.clone())
         }
-        assert_eq!(tip, self.tip());
+        assert_eq!(tip, self.tiphash());
         assert!(self.heights.contains_key(&tip));
     }
 
@@ -203,8 +203,15 @@ impl HeaderList {
         self.headers.last() == other.headers.last()
     }
 
-    pub fn tip(&self) -> Sha256dHash {
+    pub fn tiphash(&self) -> Sha256dHash {
         self.headers.last().map(|h| *h.hash()).unwrap_or_default()
+    }
+
+    pub fn tip(&self) -> Option<HeaderEntry> {
+        match self.headers.last() {
+            Some(header) => Some(header.clone()),
+            None => None,
+        }
     }
 
     pub fn len(&self) -> usize {

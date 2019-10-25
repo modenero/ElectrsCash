@@ -63,11 +63,14 @@ fn run_server(config: &Config) -> Result<()> {
 
     let mut server = None; // Electrum RPC server
     loop {
-        app.update(&signal)?;
-        query.update_mempool()?;
-        server
-            .get_or_insert_with(|| RPC::start(config.electrum_rpc_addr, query.clone(), &metrics))
-            .notify(); // update subscribed clients
+        let (headers_changed, new_tip) = app.update(&signal)?;
+        let txs_changed = query.update_mempool()?;
+        let rpc = server
+            .get_or_insert_with(|| RPC::start(config.electrum_rpc_addr, query.clone(), &metrics));
+        rpc.notify_scripthash_subscriptions(&headers_changed, txs_changed);
+        if let Some(header) = new_tip {
+            rpc.notify_subscriptions_chaintip(header);
+        }
         if let Err(err) = signal.wait(Duration::from_secs(5)) {
             info!("stopping server: {}", err);
             break;
