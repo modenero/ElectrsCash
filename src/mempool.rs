@@ -8,7 +8,7 @@ use std::sync::Mutex;
 
 use crate::daemon::{Daemon, MempoolEntry};
 use crate::errors::*;
-use crate::index::index_transaction;
+use crate::index::{index_transaction};
 use crate::metrics::{
     Gauge, GaugeVec, HistogramOpts, HistogramTimer, HistogramVec, MetricOpts, Metrics,
 };
@@ -16,6 +16,9 @@ use crate::store::{ReadStore, Row};
 use crate::util::Bytes;
 
 const VSIZE_BIN_WIDTH: u32 = 100_000; // in vbytes
+
+/// Fake height value used to signify that a transaction is in the memory pool.
+pub const MEMPOOL_HEIGHT: u32 = 0x7FFFFFFF;
 
 struct MempoolStore {
     map: BTreeMap<Bytes, Vec<Bytes>>,
@@ -29,7 +32,7 @@ impl MempoolStore {
     }
 
     fn add(&mut self, tx: &Transaction) {
-        let rows = index_transaction(tx, 0);
+        let rows = index_transaction(tx, MEMPOOL_HEIGHT as usize);
         for row in rows {
             let (key, value) = row.into_pair();
             self.map.entry(key).or_insert_with(|| vec![]).push(value);
@@ -37,7 +40,7 @@ impl MempoolStore {
     }
 
     fn remove(&mut self, tx: &Transaction) {
-        let rows = index_transaction(tx, 0);
+        let rows = index_transaction(tx, MEMPOOL_HEIGHT as usize);
         for row in rows {
             let (key, value) = row.into_pair();
             let no_values_left = {
@@ -177,6 +180,10 @@ impl Tracker {
 
     pub fn get_txn(&self, txid: &Sha256dHash) -> Option<Transaction> {
         self.items.get(txid).map(|stats| stats.tx.clone())
+    }
+
+    pub fn contains(&self, txid: &Sha256dHash) -> bool {
+        self.items.contains_key(txid)
     }
 
     /// Returns vector of (fee_rate, vsize) pairs, where fee_{n-1} > fee_n and vsize_n is the
