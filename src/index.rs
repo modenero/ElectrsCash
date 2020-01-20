@@ -79,18 +79,28 @@ pub struct TxOutKey {
 #[derive(Serialize, Deserialize)]
 pub struct TxOutValue {
     pub txid_prefix: HashPrefix,
-    pub output_index: u16,
-    pub output_value: u64,
+    output_index: Vec<u8>,
+    output_value: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct TxOutRow {
     pub key: TxOutKey,
     pub value: TxOutValue,
 }
 
+fn encode_varint(value: u64) -> Vec<u8> {
+    let mut buff = unsigned_varint::encode::u64_buffer();
+    let encoded = unsigned_varint::encode::u64(value, &mut buff);
+    encoded.to_vec()
+}
+
+fn decode_varint(index: &Vec<u8>) -> u64 {
+    unsigned_varint::decode::u64(&index[..]).unwrap().0
+
+}
+
 impl TxOutRow {
-    pub fn new(txid: &Sha256dHash, output: &TxOut, output_index: u16) -> TxOutRow {
+    pub fn new(txid: &Sha256dHash, output: &TxOut, output_index: u64) -> TxOutRow {
         TxOutRow {
             key: TxOutKey {
                 code: b'O',
@@ -98,8 +108,8 @@ impl TxOutRow {
             },
             value: TxOutValue {
                 txid_prefix: hash_prefix(&txid[..]),
-                output_index: output_index,
-                output_value: output.value,
+                output_index: encode_varint(output_index),
+                output_value: encode_varint(output.value),
             }
         }
     }
@@ -126,8 +136,12 @@ impl TxOutRow {
         }
     }
 
-    pub fn get_output_index(&self) -> u32 {
-        self.value.output_index as u32
+    pub fn get_output_index(&self) -> u64 {
+        decode_varint(&self.value.output_index)
+    }
+
+    pub fn get_output_value(&self) -> u64 {
+        decode_varint(&self.value.output_value)
     }
 }
 
@@ -213,7 +227,7 @@ pub fn index_transaction<'a>(
     let outputs = txn
         .output
         .iter().enumerate()
-        .map(move |(i, output)| TxOutRow::new(&txid, &output, i as u16).to_row());
+        .map(move |(i, output)| TxOutRow::new(&txid, &output, i as u64).to_row());
 
     // Persist transaction ID and confirmed height
     inputs

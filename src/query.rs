@@ -55,7 +55,7 @@ fn calc_balance((funding, spending): &(Vec<FundingOutput>, Vec<SpendingInput>)) 
 }
 
 
-fn txn_has_output(txn: &Transaction, n: u16, scripthash_prefix: &HashPrefix) -> bool {
+fn txn_has_output(txn: &Transaction, n: u64, scripthash_prefix: &HashPrefix) -> bool {
     let n = n as usize;
     if txn.output.len() - 1 < n {
         return false;
@@ -339,8 +339,8 @@ impl Query {
         Ok(FundingOutput {
             txn_id: txid,
             height: txrow.height,
-            output_index: txoutrow.value.output_index as usize,
-            value: txoutrow.value.output_value,
+            output_index: txoutrow.get_output_index() as usize,
+            value: txoutrow.get_output_value(),
             state: self.check_confirmation_state(&txid, txrow.height),
         })
     }
@@ -356,7 +356,7 @@ impl Query {
         for txrow in txrows {
             // TODO: Pass blockhash
             let tx = self.load_txn(&txrow.get_txid(), None)?;
-            if txn_has_output(&tx, txout.value.output_index, &txout.key.script_hash_prefix) {
+            if txn_has_output(&tx, txout.get_output_index(), &txout.key.script_hash_prefix) {
                 return Ok(txrow);
             }
         }
