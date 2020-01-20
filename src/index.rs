@@ -4,6 +4,7 @@ use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
 use bitcoin::consensus::encode::{deserialize, serialize};
 use bitcoin::util::hash::BitcoinHash;
 use bitcoin_hashes::sha256d::Hash as Sha256dHash;
+use bitcoin_hashes::Hash;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use std::collections::{HashMap, HashSet};
@@ -72,18 +73,19 @@ impl TxInRow {
 #[derive(Serialize, Deserialize)]
 pub struct TxOutKey {
     code: u8,
-    script_hash_prefix: HashPrefix,
+    pub script_hash_prefix: HashPrefix,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct TxOutValue {
     pub txid_prefix: HashPrefix,
-    pub output_index: u16
+    pub output_index: u16,
+    pub output_value: u64,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct TxOutRow {
-    key: TxOutKey,
+    pub key: TxOutKey,
     pub value: TxOutValue,
 }
 
@@ -96,7 +98,8 @@ impl TxOutRow {
             },
             value: TxOutValue {
                 txid_prefix: hash_prefix(&txid[..]),
-                output_index: output_index
+                output_index: output_index,
+                output_value: output.value,
             }
         }
     }
@@ -111,13 +114,20 @@ impl TxOutRow {
 
     pub fn to_row(&self) -> Row {
         Row {
-            key: bincode::serialize(&self).unwrap(),
-            value: vec![],
+            key: bincode::serialize(&self.key).unwrap(),
+            value: bincode::serialize(&self.value).unwrap()
         }
     }
 
     pub fn from_row(row: &Row) -> TxOutRow {
-        bincode::deserialize(&row.key).expect("failed to parse TxOutRow")
+        TxOutRow {
+            key: bincode::deserialize(&row.key).expect("failed to parse TxOutRow key"),
+            value: bincode::deserialize(&row.value).expect("failed to parse TxOutRow value")
+        }
+    }
+
+    pub fn get_output_index(&self) -> u32 {
+        self.value.output_index as u32
     }
 }
 
@@ -163,6 +173,10 @@ impl TxRow {
             key: bincode::deserialize(&row.key).expect("failed to parse TxKey"),
             height: bincode::deserialize(&row.value).expect("failed to parse height"),
         }
+    }
+
+    pub fn get_txid(&self) -> Sha256dHash {
+        Sha256dHash::from_slice(&self.key.txid).unwrap()
     }
 }
 
