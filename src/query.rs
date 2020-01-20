@@ -283,6 +283,25 @@ impl Query {
         store: &dyn ReadStore,
         funding: &FundingOutput,
     ) -> Result<Option<SpendingInput>> {
+        let spending_txns = txids_by_funding_output(store, &funding.txn_id, funding.output_index);
+
+        if spending_txns.len() == 1 {
+            let spender_txid = &spending_txns[0];
+            let txrows = txrows_by_prefix(store, *spender_txid);
+            if txrows.len() == 1 {
+                // One match, assume it's correct to avoid load_txn lookup.
+                let txid = txrows[0].get_txid();
+                return Ok(Some(SpendingInput {
+                    txn_id: txid,
+                    height: txrows[0].height,
+                    funding_output: (funding.txn_id, funding.output_index),
+                    value: funding.value,
+                    state: self.check_confirmation_state(&txid, txrows[0].height)
+                }))
+            }
+        }
+
+        // ambiguity, fetch from bitcoind to verify
         let spending_txns: Vec<TxnHeight> = self.load_txns_by_prefix(
             store,
             txids_by_funding_output(store, &funding.txn_id, funding.output_index),
