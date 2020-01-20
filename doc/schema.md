@@ -6,9 +6,9 @@ The index is stored at a single RocksDB database using the following schema:
 
 Allows efficiently finding all funding transactions for a specific address:
 
-|  Code  | Script Hash Prefix   | Funding TxID Prefix   | Funding Output Index |
-| ------ | -------------------- | --------------------- | -------------------- |
-| `b'O'` | `SHA256(script)[:8]` | `txid[:8]`            | `uint16`             |
+|  Code  | Script Hash Prefix   | Funding TxID Prefix   | Funding Output Index | Funding amount |
+| ------ | -------------------- | --------------------- | -------------------- | -------------- |
+| `b'O'` | `SHA256(script)[:8]` | `txid[:8]`            | `varint`             | `varint`       |
 
 ## Transaction inputs' index
 
