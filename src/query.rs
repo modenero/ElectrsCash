@@ -201,7 +201,7 @@ fn txids_by_script_hash(store: &dyn ReadStore, script_hash: &[u8]) -> Vec<HashPr
     store
         .scan(&TxOutRow::filter(script_hash))
         .iter()
-        .map(|row| TxOutRow::from_row(row).txid_prefix)
+        .map(|row| TxOutRow::from_row(row).value.txid_prefix)
         .collect()
 }
 

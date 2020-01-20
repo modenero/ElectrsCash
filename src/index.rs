@@ -76,19 +76,28 @@ pub struct TxOutKey {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct TxOutValue {
+    pub txid_prefix: HashPrefix,
+    pub output_index: u16
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct TxOutRow {
     key: TxOutKey,
-    pub txid_prefix: HashPrefix,
+    pub value: TxOutValue,
 }
 
 impl TxOutRow {
-    pub fn new(txid: &Sha256dHash, output: &TxOut) -> TxOutRow {
+    pub fn new(txid: &Sha256dHash, output: &TxOut, output_index: u16) -> TxOutRow {
         TxOutRow {
             key: TxOutKey {
                 code: b'O',
                 script_hash_prefix: hash_prefix(&compute_script_hash(&output.script_pubkey[..])),
             },
-            txid_prefix: hash_prefix(&txid[..]),
+            value: TxOutValue {
+                txid_prefix: hash_prefix(&txid[..]),
+                output_index: output_index
+            }
         }
     }
 
@@ -189,8 +198,8 @@ pub fn index_transaction<'a>(
     });
     let outputs = txn
         .output
-        .iter()
-        .map(move |output| TxOutRow::new(&txid, &output).to_row());
+        .iter().enumerate()
+        .map(move |(i, output)| TxOutRow::new(&txid, &output, i as u16).to_row());
 
     // Persist transaction ID and confirmed height
     inputs
