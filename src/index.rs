@@ -28,7 +28,7 @@ use crate::util::{
 pub struct TxInKey {
     pub code: u8,
     pub prev_hash_prefix: HashPrefix,
-    pub prev_index: u16,
+    prev_index: Vec<u8>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -43,7 +43,7 @@ impl TxInRow {
             key: TxInKey {
                 code: b'I',
                 prev_hash_prefix: hash_prefix(&input.previous_output.txid[..]),
-                prev_index: input.previous_output.vout as u16,
+                prev_index: encode_varint(input.previous_output.vout as u64),
             },
             txid_prefix: hash_prefix(&txid[..]),
         }
@@ -53,7 +53,7 @@ impl TxInRow {
         bincode::serialize(&TxInKey {
             code: b'I',
             prev_hash_prefix: hash_prefix(&txid[..]),
-            prev_index: output_index as u16,
+            prev_index: encode_varint(output_index as u64),
         })
         .unwrap()
     }
@@ -83,6 +83,7 @@ pub struct TxOutValue {
     output_value: Vec<u8>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct TxOutRow {
     pub key: TxOutKey,
     pub value: TxOutValue,
@@ -124,16 +125,13 @@ impl TxOutRow {
 
     pub fn to_row(&self) -> Row {
         Row {
-            key: bincode::serialize(&self.key).unwrap(),
-            value: bincode::serialize(&self.value).unwrap()
+            key: bincode::serialize(&self).unwrap(),
+            value: vec![]
         }
     }
 
     pub fn from_row(row: &Row) -> TxOutRow {
-        TxOutRow {
-            key: bincode::deserialize(&row.key).expect("failed to parse TxOutRow key"),
-            value: bincode::deserialize(&row.value).expect("failed to parse TxOutRow value")
-        }
+        bincode::deserialize(&row.key).expect("failed to parse TxOutRow key")
     }
 
     pub fn get_output_index(&self) -> u64 {
