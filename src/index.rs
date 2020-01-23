@@ -77,16 +77,11 @@ pub struct TxOutKey {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct TxOutValue {
+pub struct TxOutRow {
+    pub key: TxOutKey,
     pub txid_prefix: HashPrefix,
     output_index: Vec<u8>,
     output_value: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct TxOutRow {
-    pub key: TxOutKey,
-    pub value: TxOutValue,
 }
 
 fn encode_varint(value: u64) -> Vec<u8> {
@@ -107,11 +102,9 @@ impl TxOutRow {
                 code: b'O',
                 script_hash_prefix: hash_prefix(&compute_script_hash(&output.script_pubkey[..])),
             },
-            value: TxOutValue {
-                txid_prefix: hash_prefix(&txid[..]),
-                output_index: encode_varint(output_index),
-                output_value: encode_varint(output.value),
-            }
+            txid_prefix: hash_prefix(&txid[..]),
+            output_index: encode_varint(output_index),
+            output_value: encode_varint(output.value),
         }
     }
 
@@ -135,11 +128,11 @@ impl TxOutRow {
     }
 
     pub fn get_output_index(&self) -> u64 {
-        decode_varint(&self.value.output_index)
+        decode_varint(&self.output_index)
     }
 
     pub fn get_output_value(&self) -> u64 {
-        decode_varint(&self.value.output_value)
+        decode_varint(&self.output_value)
     }
 }
 

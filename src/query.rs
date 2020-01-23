@@ -368,7 +368,7 @@ impl Query {
     /// multiple matches.
     fn lookup_tx_by_outrow(&self, store: &dyn ReadStore, txout: &TxOutRow) -> Result<TxRow> {
 
-        let mut txrows = txrows_by_prefix(store, txout.value.txid_prefix);
+        let mut txrows = txrows_by_prefix(store, txout.txid_prefix);
         if txrows.len() == 1 {
             return Ok(txrows.remove(0));
         }
