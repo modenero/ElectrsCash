@@ -8,6 +8,7 @@ use crypto::sha2::Sha256;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
+use rayon::prelude::*;
 
 use crate::app::App;
 use crate::cache::TransactionCache;
@@ -100,7 +101,7 @@ impl Status {
             txns_map.insert(s.txn_id, height as i32);
         }
         let mut txns: Vec<(i32, Sha256dHash)> =
-            txns_map.into_iter().map(|item| (item.1, item.0)).collect();
+            txns_map.into_par_iter().map(|item| (item.1, item.0)).collect();
         txns.sort_unstable_by(|a, b| {
             if a.0 == b.0 {
                 // Order by little endian tx hash if height is the same,
@@ -201,7 +202,7 @@ fn txrow_by_txid(store: &dyn ReadStore, txid: &Sha256dHash) -> Option<TxRow> {
 fn txrows_by_prefix(store: &dyn ReadStore, txid_prefix: HashPrefix) -> Vec<TxRow> {
     store
         .scan(&TxRow::filter_prefix(txid_prefix))
-        .iter()
+        .par_iter()
         .map(|row| TxRow::from_row(row))
         .collect()
 }
@@ -209,7 +210,7 @@ fn txrows_by_prefix(store: &dyn ReadStore, txid_prefix: HashPrefix) -> Vec<TxRow
 fn txoutrows_by_script_hash(store: &dyn ReadStore, script_hash: &[u8]) -> Vec<TxOutRow> {
     store
         .scan(&TxOutRow::filter(script_hash))
-        .iter()
+        .par_iter()
         .map(|row| TxOutRow::from_row(row))
         .collect()
 }
@@ -221,7 +222,7 @@ fn txids_by_funding_output(
 ) -> Vec<HashPrefix> {
     store
         .scan(&TxInRow::filter(&txn_id, output_index))
-        .iter()
+        .par_iter()
         .map(|row| TxInRow::from_row(row).txid_prefix)
         .collect()
 }
@@ -387,7 +388,7 @@ impl Query {
         let read_store = self.app.read_store();
         let funding = txoutrows_by_script_hash(read_store, script_hash);
         let funding: Result<Vec<FundingOutput>> = funding
-            .iter()
+            .par_iter()
             .map(|outrow| self.txoutrow_to_fundingoutput(read_store, outrow))
             .collect();
 
@@ -709,7 +710,7 @@ impl Query {
         let get_tx = |store| {
             let rows = txoutrows_by_script_hash(store, scripthash);
             let mut txs: Vec<TxRow> = rows
-                .iter()
+                .par_iter()
                 .map(|p| txrows_by_prefix(store, p.txid_prefix))
                 .flatten()
                 .collect();
